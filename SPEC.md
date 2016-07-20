@@ -511,7 +511,7 @@ Set this.parsedPaths to: []
 Set that to: this
 
 Call Object.keys() with arguments:
-  1. this.meta.versions
+  1. this[this.constructor.metaPropName].versions
 Chain Call .forEach() with arguments:
   1. function with named arguments: key
     Set version to: that[that.constructor.metaPropName].versions[key]
