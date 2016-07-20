@@ -1,0 +1,22 @@
+{
+  "name": "node-attachments-processor",
+  "version": "0.1.0",
+  "description": "Neon Module which adds processing to files before uploading to S3",
+  "main": "lib/index.js",
+  "scripts": {
+    "test": "mocha"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/greduan/node-attachments-processor.git"
+  },
+  "keywords": [
+    "neon"
+  ],
+  "author": "Eduardo Lavaque <me@greduan.com> (http://greduan.com)",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/greduan/node-attachments-processor/issues"
+  },
+  "homepage": "https://github.com/greduan/node-attachments-processor#readme"
+}
