@@ -18,5 +18,14 @@
   "bugs": {
     "url": "https://github.com/greduan/node-attachments-processor/issues"
   },
-  "homepage": "https://github.com/greduan/node-attachments-processor#readme"
+  "homepage": "https://github.com/greduan/node-attachments-processor#readme",
+  "dependencies": {
+    "bluebird": "3.4.1",
+    "lodash": "4.13.1",
+    "neon": "2.0.0",
+    "node-uuid": "1.4.7"
+  },
+  "devDependencies": {
+    "mocha": "2.5.3"
+  }
 }

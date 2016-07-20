@@ -369,8 +369,9 @@ Set originalProcessor to: Object:
 Set processorVersions to:
   Call _.clone() with arguments:
     1. this.PROCESSOR_VERSIONS
-  Call .push() on processorVersions with arguments:
-    1. originalProcessor
+  OR if null set as []
+Call .push() on processorVersions with arguments:
+  1. originalProcessor
 
 /*
  * LOOP THROUGH PROCESSORS
@@ -392,6 +393,7 @@ Call .forEach() on processorVersions with arguments:
     // Get path
     Set path to:
       Concatenate:
+        "/"
         resultModel.id
         "_"
         definition.versionName
@@ -413,7 +415,7 @@ Set resultModel._processorStreams to: processorStreams
  * POPULATE NEW MODEL'S META
  */
 
-Set resultModel.meta to: Object:
+Set resultModel[that.metaPropName] to: Object:
   {
     versions: {},
   }
@@ -512,12 +514,12 @@ Call Object.keys() with arguments:
   1. this.meta.versions
 Chain Call .forEach() with arguments:
   1. function with named arguments: key
-    Set version to: that.meta.versions[key]
+    Set version to: that[that.constructor.metaPropName].versions[key]
     Set name to: key
     Set ext to: version.ext
 
     Set newPath to:
-      Call .replace() on that.path with arguments:
+      Call .replace() on that[that.constructor.pathPropName] with arguments:
         1. "{{versionName}}"
         2. name
       Chain Call .replace() with arguments:
