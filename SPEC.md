@@ -53,7 +53,7 @@ Any combination of the following:
 - Processors will always be able to return a readable Stream.
 - Will be used to extend Krypton models.
 - S3Uploader:
-  - Has an `#uploadFileFromStream()` method.
+  - Has an `#uploadStream()` method.
 - Will be used with Multer, i.e. a path to a file will be available.
 - There will be an `Attachments` main model, which'll keep track of all the
   Attachments, i.e. things that are uploaded. More info in the Usage examples.
@@ -126,8 +126,9 @@ The `processor` will:
 Takes the file given in the `srcPath` arg and passes it through the processes
 defined in `::PROCESSOR_VERSIONS`.
 
-Returns a new model instance (using `this` , which points to the current
-constructor) with some predefined data according to what it just processed.
+Returns a Promise which resolves with a new model instance (using `this` , which
+points to the current constructor) with some predefined data according to what
+it just processed.
 
 It predefines the following:
 
@@ -325,9 +326,10 @@ None.
 ###### Typical use case
 
 ```js
-Attachment.processFile('/tmp/randomimage.png');
-// ^ returns Attachment instance so you can continue to chain other methods,
-// like .uploadProcessedFiles()
+Attachment.processFile('/tmp/randomimage.png')
+  .then(function (model) {
+    // ...
+  });
 ```
 
 ###### Pseudo-code
@@ -336,99 +338,111 @@ Note that throughout this pseudo-code, at the top level `this` points to the
 model's constructor, at least in Neon it does.
 
 ```
-Set resultModel to: new this
 Set that to: this
 
-Set resultModel.id to:
-  Call uuid.v4()
-
-/*
- * CREATE THE ORIGINAL PROCESSOR
- */
-
-Set ext to:
-  Call .split() on srcPath with arguments:
-    1. "."
-  Chain Call .reverse()
-  Get first element in array // [0]
-
-Set originalProcessor to: Object:
-  {
-    ext: ext,
-    versionName: "original",
-    meta: {},
-    processor: function with named arguments: fileReadable
-      Return Call Promise.resolve() with arguments:
-        1. fileReadable
-  }
-
-/*
- * CREATE PROCESSOR VERSIONS ARRAY WITH ORIGINAL PROCESSOR ADDED
- */
-
-Set processorVersions to:
-  Call _.clone() with arguments:
-    1. this.PROCESSOR_VERSIONS
-  OR if null set as []
-Call .push() on processorVersions with arguments:
-  1. originalProcessor
-
-/*
- * LOOP THROUGH PROCESSORS
- */
-
-Set processorStreams to: []
-
-Call .forEach() on processorVersions with arguments:
-  1. function with named arguments: definition
-    Set fileStream to:
-      Call fs.createReadStream() with arguments:
+Return new Promise() with arguments:
+  1. function with named arguments: resolve, reject
+    Set consErr to:
+      Call that.uploaderInstance.checkConstraints() with arguments:
         1. srcPath
 
-    // Get stream
-    Set stream to:
-      Call to definition.processor() with arguments:
-        1. fileStream
+    If consErr is an Error object
+      Return Call Promise.reject() with arguments:
+        1. consErr
 
-    // Get path
-    Set path to:
-      Concatenate:
-        "/"
-        resultModel.id
-        "_"
-        definition.versionName
-        "."
-        definition.ext
+    Set resultModel to: new that
 
-    Set processor to: Object:
+    Set resultModel.id to:
+      Call uuid.v4()
+
+    /*
+     * CREATE THE ORIGINAL PROCESSOR
+     */
+
+    Set ext to:
+      Call .split() on srcPath with arguments:
+        1. "."
+      Chain Call .reverse()
+      Get first element in array // [0]
+
+    Set originalProcessor to: Object:
       {
-        path: path,
-        stream: stream,
+        ext: ext,
+        versionName: "original",
+        meta: {},
+        processor: function with named arguments: fileReadable
+          Return Call Promise.resolve() with arguments:
+            1. fileReadable
       }
 
-    Call .push() processorStreams with arguments:
-      1. processor
+    /*
+     * CREATE PROCESSOR VERSIONS ARRAY WITH ORIGINAL PROCESSOR ADDED
+     */
 
-Set resultModel._processorStreams to: processorStreams
+    Set processorVersions to:
+      Call _.clone() with arguments:
+        1. that.PROCESSOR_VERSIONS
+      OR If null set as []
+    Call .push() on processorVersions with arguments:
+      1. originalProcessor
 
-/*
- * POPULATE NEW MODEL'S META
- */
+    /*
+     * LOOP THROUGH PROCESSORS
+     */
 
-Set resultModel[that.metaPropName] to: Object:
-  {
-    versions: {},
-  }
+    Set processorStreams to: []
 
-Call .forEach() on processorVersions with arguments:
-  1. function with named arguments: definition
-    Set resultModel[that.metaPropName][definition.versionName] to: Object:
+    Call .forEach() on processorVersions with arguments:
+      1. function with named arguments: definition
+        Set fileStream to:
+          Call fs.createReadStream() with arguments:
+            1. srcPath
+
+        // Get stream
+        Set stream to:
+          Call to definition.processor() with arguments:
+            1. fileStream
+
+        // Get path
+        Set path to:
+          Concatenate:
+            "/"
+            resultModel.id
+            "_"
+            definition.versionName
+            "."
+            definition.ext
+
+        Set processor to: Object:
+          {
+            path: path,
+            stream: stream,
+          }
+
+        Call .push() processorStreams with arguments:
+          1. processor
+
+    Set resultModel._processorStreams to: processorStreams
+
+    /*
+     * POPULATE NEW MODEL'S META
+     */
+
+    Set resultModel[that.metaPropName] to: Object:
       {
-        ext: definition.ext,
-        meta: definition.meta,
+        versions: {},
       }
 
-Return resultModel
+    Call .forEach() on processorVersions with arguments:
+      1. function with named arguments: definition
+        Set resultModel[that.metaPropName][definition.versionName] to: Object:
+          {
+            ext: definition.ext,
+            meta: definition.meta,
+          }
+
+    Return Call resolve() with arguments:
+      1. resultModel
 ```
 
 ##### `#uploadProcessedFiles([<S3Uploader> uploaderInstance])`
@@ -451,9 +465,10 @@ saved to the DB.
 ###### Typical use case
 
 ```
-Attachment
-  .processFile('/tmp/randomimage.png')
-  .uploadProcessedFiles()
+Attachment.processFile('/tmp/randomimage.png')
+  .then(function (model) {
+    return model.uploadProcessedFiles();
+  })
   .then(...)
   .catch(...);
 ```
@@ -469,7 +484,7 @@ If uploaderInstance is undefined
 Return Call Promise.each() with arguments:
   1. this._processorStreams
   2. function with named arguments: processor
-    Return Call uploaderInstance.uploadFileFromStream() with arguments:
+    Return Call uploaderInstance.uploadStream() with arguments:
       1. processor.stream
       2. processor.path
 Chain Call .then() with arguments:
@@ -495,9 +510,10 @@ Sets `#parsedPaths` to be an object, check the functional spec section on
 ###### Typical use case
 
 ```
-Attachment
-  .processFile('/tmp/randomimage.png')
-  .uploadProcessedFiles()
+Attachment.processFile('/tmp/randomimage.png')
+  .then(function (model) {
+    return model.uploadProcessedFiles();
+  })
   .then(function (model) {
     model.parsePaths();
   })
@@ -684,9 +700,10 @@ Usage examples of above code examples
  * - AttBackground
  */
 
-AttAvatar
-  .processFile('/tmp/randomimage.png')
-  .uploadProcessedFiles()
+AttAvatar.processFile('/tmp/randomimage.png')
+  .then(function (model) {
+    return model.uploadProcessedFiles();
+  })
   .then(function (model) {
     model.parsePaths();
     /*
@@ -700,9 +717,10 @@ AttAvatar
   })
   .catch(...);
 
-AttBackground
-  .processFile('/tmp/randomstringimage.png')
-  .uploadProcessedFiles()
+AttBackground.processFile('/tmp/randomstringimage.png')
+  .then(function (model) {
+    return model.uploadProcessedFiles();
+  })
   .then(function (model) {
     model.parsePaths();
     /*
