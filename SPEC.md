@@ -435,11 +435,18 @@ Return new Promise() with arguments:
 
     Call .forEach() on processorVersions with arguments:
       1. function with named arguments: definition
-        Set resultModel[that.metaPropName][definition.versionName] to: Object:
+        Set resultModel[that.metaPropName].versions[definition.versionName] to: Object:
           {
             ext: definition.ext,
             meta: definition.meta,
           }
+
+    Set resultModel.path to:
+      Concatenate:
+        that.uploaderInstance._pathPrefix
+        "/"
+        resultModel.id
+        "_{{versionName}}.{{ext}}"
 
     Return Call resolve() with arguments:
       1. resultModel
